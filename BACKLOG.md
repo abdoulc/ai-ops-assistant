@@ -81,7 +81,7 @@ The project demonstrates senior backend engineering: deterministic contracts aro
 - [x] `P0` Handle timeout, unavailable model, and invalid model output.
 - [x] `P0` Version and test the incident-analysis prompt.
 - [x] `P0` Add domain, use-case, API, and adapter unit tests.
-- [ ] `P0` Add a Spring AI adapter integration test without a mocked `ChatClient`.
+- [x] `P0` Add a Spring AI adapter integration test without a mocked `ChatClient`.
 - [x] `P1` Add request correlation and safe logging.
 
 ## S2 — Document Ingestion
