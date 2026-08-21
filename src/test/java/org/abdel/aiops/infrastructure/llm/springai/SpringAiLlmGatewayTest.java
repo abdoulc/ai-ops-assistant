@@ -1,5 +1,6 @@
 package org.abdel.aiops.infrastructure.llm.springai;
 
+import io.netty.handler.timeout.ReadTimeoutException;
 import org.abdel.aiops.domain.llm.LlmRequest;
 import org.abdel.aiops.domain.llm.exception.LlmInvalidResponseException;
 import org.abdel.aiops.domain.llm.exception.LlmModelUnavailableException;
@@ -27,6 +28,26 @@ class SpringAiLlmGatewayTest {
                 "I/O error while calling Ollama",
                 new SocketTimeoutException("Read timed out")
         );
+
+        when(chatClient.prompt()
+                .user(anyString())
+                .call()
+                .content())
+                .thenThrow(timeout);
+
+        SpringAiLlmGateway gateway = new SpringAiLlmGateway(chatClient);
+        LlmRequest request = new LlmRequest("Analyze this incident");
+
+        assertThatThrownBy(() -> gateway.generate(request))
+                .isInstanceOf(LlmTimeoutException.class)
+                .hasMessage("LLM request timed out")
+                .hasCause(timeout);
+    }
+
+    @Test
+    void shouldTranslateReactorNettyReadTimeout() {
+        ChatClient chatClient = mock(ChatClient.class, RETURNS_DEEP_STUBS);
+        ReadTimeoutException timeout = ReadTimeoutException.INSTANCE;
 
         when(chatClient.prompt()
                 .user(anyString())

@@ -1,5 +1,6 @@
 package org.abdel.aiops.infrastructure.llm.springai;
 
+import io.netty.handler.timeout.ReadTimeoutException;
 import org.abdel.aiops.domain.llm.LlmGateway;
 import org.abdel.aiops.domain.llm.LlmRequest;
 import org.abdel.aiops.domain.llm.LlmResponse;
@@ -83,7 +84,8 @@ public class SpringAiLlmGateway implements LlmGateway {
         Throwable current = throwable;
 
         while (current != null) {
-            if (current instanceof SocketTimeoutException) {
+            if (current instanceof SocketTimeoutException
+                    || current instanceof ReadTimeoutException) {
                 return true;
             }
             current = current.getCause();

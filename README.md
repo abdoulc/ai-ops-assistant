@@ -202,7 +202,7 @@ The application logs request method, path, response status, and duration. It del
 | `OLLAMA_BASE_URL` | Ollama URL for the local profile | `http://localhost:11435` |
 | `OLLAMA_CHAT_MODEL` | Ollama chat model | `qwen3:0.6b` |
 | `HTTP_CONNECT_TIMEOUT` | HTTP connection timeout | `3s` |
-| `HTTP_READ_TIMEOUT` | Maximum inference response wait | `2m` |
+| `HTTP_READ_TIMEOUT` | Maximum inference response wait | `5m` |
 | `AI_RETRY_MAX_ATTEMPTS` | Maximum Spring AI attempts | `1` |
 
 Qwen3 thinking is explicitly disabled for this structured-output workflow. With a small output budget, reasoning can consume every generated token and leave no JSON response. The Docker equivalent is `SPRING_AI_OLLAMA_CHAT_THINK=false`.

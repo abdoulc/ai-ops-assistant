@@ -5,7 +5,7 @@ spring:
   http:
     clients:
       connect-timeout: ${HTTP_CONNECT_TIMEOUT:3s}
-      read-timeout: ${HTTP_READ_TIMEOUT:2m}
+      read-timeout: ${HTTP_READ_TIMEOUT:5m}
 management:
   endpoint:
     health:
