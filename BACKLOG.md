@@ -73,15 +73,16 @@ The project demonstrates senior backend engineering: deterministic contracts aro
 
 **Goal:** deliver the first end-to-end AI Ops use case.
 
-- [ ] `P0` Model `Severity` and `IncidentAnalysis`.
-- [ ] `P0` Add structured generation behind `LlmGateway`.
-- [ ] `P0` Create `POST /api/v1/incidents/analyze`.
-- [ ] `P0` Validate service name, stacktrace presence, and maximum size.
-- [ ] `P0` Return summary, probable cause, severity, hypotheses, recommendations, and confidence.
-- [ ] `P0` Handle timeout, unavailable model, and invalid model output.
-- [ ] `P0` Version and test the incident-analysis prompt.
-- [ ] `P0` Add unit, API, and adapter integration tests.
-- [ ] `P1` Add request correlation and safe logging.
+- [x] `P0` Model `Severity` and `IncidentAnalysis`.
+- [x] `P0` Add structured generation behind `LlmGateway`.
+- [x] `P0` Create `POST /api/v1/incidents/analyze`.
+- [x] `P0` Validate service name, stacktrace presence, and maximum size.
+- [x] `P0` Return summary, probable cause, severity, hypotheses, recommendations, and confidence.
+- [x] `P0` Handle timeout, unavailable model, and invalid model output.
+- [x] `P0` Version and test the incident-analysis prompt.
+- [x] `P0` Add domain, use-case, API, and adapter unit tests.
+- [ ] `P0` Add a Spring AI adapter integration test without a mocked `ChatClient`.
+- [x] `P1` Add request correlation and safe logging.
 
 ## S2 — Document Ingestion
 

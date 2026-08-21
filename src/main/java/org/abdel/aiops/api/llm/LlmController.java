@@ -1,6 +1,5 @@
 package org.abdel.aiops.api.llm;
 
-import org.abdel.aiops.api.dto.GenerateRequest;
 import org.abdel.aiops.application.llm.GenerateResponseUseCase;
 import org.abdel.aiops.domain.llm.LlmResponse;
 import org.springframework.web.bind.annotation.PostMapping;
