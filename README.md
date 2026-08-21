@@ -1,94 +1,68 @@
 # AI Ops Assistant
 
-AI Ops Assistant is a Java backend for experimenting with reliable, local-first AI operations workflows. The current foundation exposes a provider-independent LLM use case backed by Spring AI and a local Ollama instance.
+AI Ops Assistant is a local-first Java backend for building reliable AI-assisted operations workflows. It currently analyzes an incident stack trace through a typed API, uses a local Ollama model through Spring AI, and returns a validated diagnosis without requiring a paid external API.
 
-The project is being built incrementally toward incident analysis, retrieval-augmented generation, tool calling, observability, evaluation, and guarded operational workflows.
+The completed S0 and S1 milestones establish the architecture and the first end-to-end use case. The next milestone introduces document ingestion as the foundation for retrieval-augmented generation (RAG).
 
-## Current Scope
+## Current Capabilities
 
-The S0 technical foundation currently provides:
+- Java 21 and Spring Boot 4;
+- local inference with Spring AI, Ollama, and Qwen3;
+- provider-independent `LlmGateway` domain port;
+- typed incident analysis with severity, hypotheses, recommendations, and confidence;
+- request validation and `ProblemDetail` errors;
+- dedicated handling for timeouts, unavailable models, and invalid model output;
+- correlation IDs and safe HTTP metadata logging;
+- PostgreSQL with pgvector, ready for the RAG milestones;
+- Docker Compose health checks and persistent model storage;
+- unit, MVC, architecture, adapter, and Spring AI integration tests.
 
-- Java 21 and Spring Boot;
-- a domain-level `LlmGateway` abstraction;
-- a Spring AI adapter backed by Ollama;
-- local inference without a paid external API;
-- PostgreSQL with pgvector, ready for later RAG work;
-- Docker Compose healthchecks and persistent volumes;
-- Actuator readiness probes;
-- deterministic unit tests with `FakeLlmGateway`;
-- ArchUnit rules protecting layer boundaries;
-- configurable connection and response timeouts.
-
-This is not yet an autonomous operations agent. The current API is intentionally small so that each later capability can be introduced and evaluated independently.
+This is not an autonomous remediation agent. It performs analysis only and has no operational write tools.
 
 ## Architecture
 
 ```text
-HTTP request
-    │
-    ▼
-LlmController                         API adapter
-    │
-    ▼
-GenerateResponseUseCase               Application logic
-    │
-    ▼
-LlmGateway                            Domain port
-    ▲
-    │
-SpringAiLlmGateway                    Infrastructure adapter
-    │
-    ▼
-Spring AI → Ollama                    Local inference
+HTTP client
+    |
+    v
+CorrelationIdFilter
+    |
+    v
+IncidentController                 API layer
+    |
+    v
+AnalyzeIncidentUseCase             Application layer
+    |
+    v
+LlmGateway                         Domain port
+    ^
+    |
+SpringAiLlmGateway                 Infrastructure adapter
+    |
+    v
+Spring AI -> Ollama                Local inference
 ```
 
 Package responsibilities:
 
 ```text
 org.abdel.aiops
-├── api             HTTP controllers and DTOs
-├── application     framework-independent use cases
-├── domain          business contracts and models
-└── infrastructure  Spring configuration and external adapters
+|-- api             HTTP controllers, validation, filters, and errors
+|-- application     framework-independent use cases and prompt templates
+|-- domain          business models, ports, and provider-neutral exceptions
+`-- infrastructure  Spring configuration and external adapters
 ```
 
-The architecture decision is documented in [ADR-001](docs/adr/ADR-001-isolate-spring-ai-behind-llm-gateway.md).
+Spring AI is isolated behind the domain port so the application layer does not depend on a specific model provider. See [ADR-001](docs/adr/ADR-001-isolate-spring-ai-behind-llm-gateway.md).
 
 ## Prerequisites
 
-- Java 21
-- Maven 3.8 or later
-- Docker Desktop with Docker Compose
-- At least enough memory to run PostgreSQL and a small Ollama model
+- Java 21;
+- Maven 3.8 or later;
+- Docker Desktop with Docker Compose;
+- enough memory for PostgreSQL and the selected Ollama model.
 
-The default local model is `qwen3:0.6b`. It is suitable for validating the integration on constrained hardware, but its answer quality is limited.
-
-## Configuration Modes
-
-The application supports two execution modes.
-
-### Spring on Windows, dependencies in Docker
-
-Activate the `local` Spring profile. The application runs on Windows and connects to Ollama through the exposed host port:
-
-```text
-Spring: http://localhost:8080
-Ollama: http://localhost:11435
-PostgreSQL: localhost:5432
-```
-
-Configuration comes from `application.yml` and `application-local.yml`.
-
-### Full Docker Compose stack
-
-The application, Ollama, and PostgreSQL all run in Docker. Containers use Compose service names and internal ports:
-
-```text
-app_engine → http://ollama:11434
-app_engine → jdbc:postgresql://postgres:5432/vector_db
-```
-
-Do not enable the `local` profile inside Docker.
+The default model is `qwen3:0.6b`. It is practical on constrained hardware, but a larger model will generally produce better incident diagnoses.
 
 ## First-Time Setup
 
@@ -98,101 +72,79 @@ Start Ollama and PostgreSQL:
 docker compose up -d ollama postgres
 ```
 
-Download the configured model into the persistent Ollama volume:
+Download the default model into the Docker-managed Ollama instance:
 
 ```powershell
 docker compose exec ollama ollama pull qwen3:0.6b
-```
-
-Verify the installed models:
-
-```powershell
 docker compose exec ollama ollama list
 ```
 
-The named `ollama_data` volume keeps downloaded models when the container is recreated.
+The `ollama_data` volume preserves downloaded models when the container is recreated.
 
 ## Run Spring Locally
 
-Start the dependencies:
+In this mode, Spring runs on Windows while Ollama and PostgreSQL run in Docker:
+
+```text
+Application: http://localhost:8081
+Ollama:      http://localhost:11435
+PostgreSQL:  localhost:5432
+```
+
+Start the dependencies and run Spring with the local profile:
 
 ```powershell
 docker compose up -d ollama postgres
-```
-
-Run Spring with the local profile:
-
-```powershell
 mvn spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 
-Alternatively, configure this environment variable in the IDE run configuration:
+For an IDE run configuration, set:
 
 ```text
 SPRING_PROFILES_ACTIVE=local
 ```
 
-The startup logs should confirm:
-
-```text
-The following 1 profile is active: "local"
-```
+Do not activate the `local` profile when the application itself runs in Docker.
 
 ## Run the Full Docker Stack
 
-The Dockerfile copies the packaged JAR, so build it first:
-
 ```powershell
 mvn clean package
-```
-
-Build and start all services:
-
-```powershell
 docker compose up -d --build
-```
-
-Check their status:
-
-```powershell
 docker compose ps
 ```
 
-Expected result:
+The application container uses Docker service discovery:
 
 ```text
-app_engine          healthy
-ollama              healthy
-postgres_pgvector   healthy
+app_engine -> http://ollama:11434
+app_engine -> jdbc:postgresql://postgres:5432/vector_db
 ```
 
-## API Usage
+The Docker application is exposed on `http://localhost:8080`.
+
+## Analyze an Incident
 
 Endpoint:
 
 ```http
-POST /api/v1/llm/generate
+POST /api/v1/incidents/analyze
 Content-Type: application/json
+X-Correlation-ID: incident-123
 ```
 
-Request:
-
-```json
-{
-  "prompt": "Reply with OK only"
-}
-```
-
-PowerShell example:
+PowerShell example for a locally running Spring application:
 
 ```powershell
 $body = @{
-    prompt = "Reply with OK only"
+    service = "payment-service"
+    stackTrace = "java.sql.SQLTransientConnectionException: timeout"
 } | ConvertTo-Json
 
 Invoke-RestMethod `
-    -Uri "http://localhost:8080/api/v1/llm/generate" `
+    -Uri "http://localhost:8081/api/v1/incidents/analyze" `
     -Method Post `
+    -Headers @{ "X-Correlation-ID" = "incident-123" } `
     -ContentType "application/json" `
     -Body $body
 ```
@@ -201,117 +153,151 @@ Example response:
 
 ```json
 {
-  "content": "OK"
+  "summary": "Database connections are exhausted",
+  "probableCause": "Connection pool exhaustion",
+  "severity": "HIGH",
+  "hypotheses": ["Long-running transactions"],
+  "recommendations": ["Inspect connection-pool metrics"],
+  "confidence": 0.85
 }
 ```
 
-Local inference speed depends heavily on CPU, GPU availability, Docker resources, model size, and whether the model is already loaded.
+`service` is required and limited to 100 characters. `stackTrace` is required and limited to 50,000 characters.
 
-## Health Checks
+The lower-level `POST /api/v1/llm/generate` endpoint remains available as a text-generation playground, but incident analysis is the primary product API.
 
-Application readiness:
+## Error Contract
 
-```text
-http://localhost:8080/actuator/health/readiness
+Errors use `application/problem+json` and do not expose raw provider messages.
+
+| Situation | HTTP status | Title |
+|---|---:|---|
+| Invalid request or malformed JSON | 400 | `Validation failed` or `Malformed request` |
+| Invalid structured model output | 502 | `Invalid LLM response` |
+| Configured model unavailable | 503 | `LLM unavailable` |
+| Model request timeout | 504 | `LLM timeout` |
+
+Example:
+
+```json
+{
+  "title": "LLM timeout",
+  "status": 504,
+  "detail": "The language model did not respond in time",
+  "instance": "/api/v1/incidents/analyze"
+}
 ```
 
-Ollama API through the host:
+## Correlation and Safe Logging
 
-```text
-http://localhost:11435/api/tags
-```
+Clients may send `X-Correlation-ID`. Valid identifiers are returned in the response and included in application logs. Missing or unsafe values are replaced with a UUID.
 
-Inspect all Compose services:
-
-```powershell
-docker compose ps
-```
-
-## Tests
-
-Run all tests:
-
-```powershell
-mvn test
-```
-
-Run only the architecture tests:
-
-```powershell
-mvn -Dtest=ArchitectureTest test
-```
-
-The test suite currently includes:
-
-- a deterministic unit test for `GenerateResponseUseCase`;
-- a fake LLM gateway requiring neither Spring nor Ollama;
-- ArchUnit rules that prevent `domain` and `application` from depending on Spring or outer adapters.
+The application logs request method, path, response status, and duration. It deliberately avoids logging request bodies, supplied stack traces, full prompts, and raw model responses. Keep Spring Web and Spring AI logging at `INFO` wherever incident data may be sensitive.
 
 ## Configuration Reference
 
 | Variable | Purpose | Local default |
 |---|---|---|
-| `SPRING_PROFILES_ACTIVE` | Activates environment-specific Spring configuration | none |
-| `OLLAMA_BASE_URL` | Ollama URL used by the `local` profile | `http://localhost:11435` |
-| `OLLAMA_CHAT_MODEL` | Model used by the `local` profile | `qwen3:0.6b` |
-| `HTTP_CONNECT_TIMEOUT` | Maximum time allowed to establish an HTTP connection | `3s` |
-| `HTTP_READ_TIMEOUT` | Maximum wait for an HTTP response | `2m` |
-| `AI_RETRY_MAX_ATTEMPTS` | Maximum Spring AI attempts per call | `1` |
+| `SPRING_PROFILES_ACTIVE` | Activates environment-specific configuration | none |
+| `OLLAMA_BASE_URL` | Ollama URL for the local profile | `http://localhost:11435` |
+| `OLLAMA_CHAT_MODEL` | Ollama chat model | `qwen3:0.6b` |
+| `HTTP_CONNECT_TIMEOUT` | HTTP connection timeout | `3s` |
+| `HTTP_READ_TIMEOUT` | Maximum inference response wait | `2m` |
+| `AI_RETRY_MAX_ATTEMPTS` | Maximum Spring AI attempts | `1` |
 
-Docker Compose supplies the equivalent standard Spring properties directly to the application container.
+Qwen3 thinking is explicitly disabled for this structured-output workflow. With a small output budget, reasoning can consume every generated token and leave no JSON response. The Docker equivalent is `SPRING_AI_OLLAMA_CHAT_THINK=false`.
 
-Copy `.env.example` when local environment overrides are needed. Never commit real credentials or sensitive values.
+Copy `.env.example` when overrides are needed. Do not commit credentials, production stack traces, prompts containing confidential data, or model responses derived from private incidents.
+
+## Health Checks
+
+```text
+Local Spring:     http://localhost:8081/actuator/health/readiness
+Docker stack:     http://localhost:8080/actuator/health/readiness
+Ollama host port: http://localhost:11435/api/tags
+```
+
+## Tests
+
+Run the complete suite:
+
+```powershell
+mvn test
+```
+
+The suite covers:
+
+- domain invariants for `IncidentAnalysis`;
+- use cases with a deterministic `FakeLlmGateway`;
+- prompt version and contract;
+- request validation and HTTP error contracts with MockMvc;
+- correlation ID validation and MDC cleanup;
+- architecture boundaries with ArchUnit;
+- adapter error translation;
+- real Spring AI/Ollama HTTP serialization and structured conversion through MockWebServer.
+
+The integration tests do not require Docker or a downloaded model. They use the real Spring AI client against a deterministic local HTTP fixture.
 
 ## Troubleshooting
 
 ### Model not found
 
-If Ollama returns a `404` such as `model 'qwen3:0.6b' not found`, install the model inside the Docker-managed Ollama instance:
+The Ollama container and a Windows Ollama installation have separate model stores. Install the model inside the container used by this project:
 
 ```powershell
 docker compose exec ollama ollama pull qwen3:0.6b
 ```
 
-An Ollama installation on Windows and the Ollama container use separate model stores.
+### Connection closes before the response
 
-### Ollama address differs by execution mode
+Compare the Docker network with the published Windows port:
 
-Use:
+```powershell
+docker compose exec ops-app-engine curl http://ollama:11434/api/tags
+curl.exe http://127.0.0.1:11435/api/tags
+```
 
-- `http://localhost:11435` when Spring runs on Windows;
-- `http://ollama:11434` when Spring runs in Docker Compose.
+If the internal request succeeds but the published port returns an empty response, recreate only Ollama. The named volume keeps the models:
 
-Using `localhost` from inside `app_engine` points back to the application container, not to Ollama.
+```powershell
+docker compose up -d --force-recreate ollama
+```
+
+### Structured analysis returns 502
+
+Confirm that Qwen thinking is disabled and restart Spring after changing configuration:
+
+```yaml
+spring:
+  ai:
+    ollama:
+      chat:
+        think: false
+```
 
 ### Generation is slow
 
-Inspect container resources during a request:
+The first request may load the model into memory. Inspect resource usage with:
 
 ```powershell
 docker stats ollama
 ```
 
-The first request can be slower while the model is loaded. If every request remains slow, verify the CPU and memory allocated to Docker Desktop or select a smaller model.
+## Project Status and Roadmap
 
-### Container configuration changed but behavior did not
+- S0 - Local foundation: complete;
+- S1 - Typed stacktrace analysis: complete;
+- S2 - Document ingestion: next.
 
-Rebuild the JAR and recreate the application container:
+The detailed roadmap is maintained in [BACKLOG.md](BACKLOG.md).
 
-```powershell
-mvn clean package
-docker compose up -d --build --force-recreate ops-app-engine
-```
-
-## Project Roadmap
-
-The detailed incremental roadmap is maintained in [BACKLOG.md](BACKLOG.md).
-
-The next product milestone introduces typed incident analysis. Later milestones add document ingestion, pgvector search, RAG with citations, tool calling, authorization, observability, evaluation, and advanced local inference.
+Future milestones add document ingestion, pgvector search, cited RAG, read-only operational tools, authorization, observability, evaluation, resilience, Kubernetes deployment, guardrails, and governed agent workflows.
 
 ## Current Limitations
 
-- Generated output is not yet validated against a structured contract.
-- The API does not yet translate LLM failures into dedicated error responses.
-- There is no RAG pipeline or semantic search yet.
-- There are no operational tools or write actions.
-- The default small model prioritizes local compatibility over answer quality.
+- diagnoses are model-generated and must not be treated as authoritative;
+- the default 0.6B model favors low resource usage over diagnostic quality;
+- there is no retrieval pipeline or evidence citation yet;
+- correlation context is not yet propagated to every Reactor worker thread;
+- no operational tools or write actions are available;
+- authentication and authorization are not implemented yet.

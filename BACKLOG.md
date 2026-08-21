@@ -277,7 +277,7 @@ The project demonstrates senior backend engineering: deterministic contracts aro
 ## Immediate Next Actions
 
 - [x] Complete S0.
-- [ ] Complete S1 typed incident analysis.
+- [x] Complete S1 typed incident analysis.
 - [ ] Select an embedding model before S3.
 - [ ] Record a short S0 demonstration.
 
