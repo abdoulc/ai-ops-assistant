@@ -46,6 +46,7 @@ services:
       - SPRING_AI_OLLAMA_CHAT_MODEL=qwen3:0.6b
       - SPRING_AI_OLLAMA_CHAT_TEMPERATURE=0
       - SPRING_AI_OLLAMA_CHAT_NUM_PREDICT=200
+      - SPRING_AI_OLLAMA_CHAT_THINK=false
     restart: unless-stopped
     depends_on:
       postgres:

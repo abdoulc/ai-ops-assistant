@@ -1,5 +1,6 @@
 package org.abdel.aiops.infrastructure.config;
 
+import org.abdel.aiops.application.incident.AnalyzeIncidentUseCase;
 import org.abdel.aiops.application.llm.GenerateResponseUseCase;
 import org.abdel.aiops.domain.llm.LlmGateway;
 import org.springframework.ai.chat.client.ChatClient;
@@ -17,5 +18,10 @@ public class AiConfig {
     @Bean
     GenerateResponseUseCase generateResponseUseCase(LlmGateway llmGateway) {
         return new GenerateResponseUseCase(llmGateway);
+    }
+
+    @Bean
+    AnalyzeIncidentUseCase analyzeIncidentUseCase(LlmGateway llmGateway) {
+        return new AnalyzeIncidentUseCase(llmGateway);
     }
 }

@@ -1,4 +1,4 @@
-package org.abdel.aiops.api.dto;
+package org.abdel.aiops.api.llm;
 
 public record GenerateRequest(String prompt) {
 }

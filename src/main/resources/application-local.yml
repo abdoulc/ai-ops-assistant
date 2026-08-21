@@ -1,10 +1,13 @@
 # Configuration du profil local. -Dspring-boot.run.profiles=local
+server:
+  port: 8081
 spring:
   ai:
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11435}
       chat:
         model: ${OLLAMA_CHAT_MODEL:qwen3:0.6b}
+        think: false
         temperature: 0
         num-predict: 200
 
