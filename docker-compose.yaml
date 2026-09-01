@@ -18,16 +18,20 @@ services:
     image: pgvector/pgvector:pg16
     container_name: postgres_pgvector
     environment:
-      POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: app_password
-      POSTGRES_DB: vector_db
+      POSTGRES_USER: ${POSTGRES_USER:-app_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app_password}
+      POSTGRES_DB: ${POSTGRES_DB:-vector_db}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U app_user -d vector_db" ]
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready -U ${POSTGRES_USER:-app_user}
+          -d ${POSTGRES_DB:-vector_db}
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,9 +43,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/vector_db
-      - SPRING_DATASOURCE_USERNAME=app_user
-      - SPRING_DATASOURCE_PASSWORD=app_password
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-vector_db}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-app_user}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-app_password}
       - SPRING_AI_OLLAMA_BASE_URL=http://ollama:11434
       - SPRING_AI_OLLAMA_CHAT_MODEL=qwen3:0.6b
       - SPRING_AI_OLLAMA_CHAT_TEMPERATURE=0

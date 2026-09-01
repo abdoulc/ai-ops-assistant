@@ -1,6 +1,8 @@
 package org.abdel.aiops.api.error;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.abdel.aiops.domain.document.DocumentAlreadyExistsException;
+import org.abdel.aiops.domain.document.DocumentNotFoundException;
 import org.abdel.aiops.domain.llm.exception.LlmInvalidResponseException;
 import org.abdel.aiops.domain.llm.exception.LlmModelUnavailableException;
 import org.abdel.aiops.domain.llm.exception.LlmTimeoutException;
@@ -94,6 +96,32 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_GATEWAY,
                 "Invalid LLM response",
                 "The language model returned an invalid response",
+                request
+        );
+    }
+
+    @ExceptionHandler(DocumentAlreadyExistsException.class)
+    ProblemDetail handleDocumentAlreadyExists(
+            DocumentAlreadyExistsException exception,
+            HttpServletRequest request
+    ) {
+        return createProblem(
+                HttpStatus.CONFLICT,
+                "Document already exists",
+                "A document with the same content already exists",
+                request
+        );
+    }
+
+    @ExceptionHandler(DocumentNotFoundException.class)
+    ProblemDetail handleDocumentNotFound(
+            DocumentNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return createProblem(
+                HttpStatus.NOT_FOUND,
+                "Document not found",
+                "The requested document does not exist",
                 request
         );
     }

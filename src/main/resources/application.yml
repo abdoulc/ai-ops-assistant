@@ -1,4 +1,10 @@
 spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/vector_db}
+    username: ${SPRING_DATASOURCE_USERNAME:app_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:app_password}
+  flyway:
+    enabled: true
   ai:
     retry:
       max-attempts: ${AI_RETRY_MAX_ATTEMPTS:1}
@@ -6,6 +12,12 @@ spring:
     clients:
       connect-timeout: ${HTTP_CONNECT_TIMEOUT:3s}
       read-timeout: ${HTTP_READ_TIMEOUT:5m}
+
+aiops:
+  ingestion:
+    chunk-size: ${INGESTION_CHUNK_SIZE:1000}
+    overlap-size: ${INGESTION_OVERLAP_SIZE:200}
+
 management:
   endpoint:
     health:

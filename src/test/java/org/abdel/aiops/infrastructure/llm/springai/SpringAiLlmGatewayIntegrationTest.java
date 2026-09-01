@@ -21,7 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = {
         "spring.ai.retry.max-attempts=1",
         "spring.ai.ollama.chat.model=test-model",
-        "spring.ai.ollama.chat.think=false"
+        "spring.ai.ollama.chat.think=false",
+        "spring.flyway.enabled=false"
 })
 class SpringAiLlmGatewayIntegrationTest {
 
